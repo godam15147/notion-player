@@ -8,28 +8,41 @@
 body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-select: none; }
 
 .player-box {
+    position: relative;
     max-width: 620px; margin: auto; background: #d9efff;
     border-radius: 20px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
     padding: 20px;
 }
 
+/* 🚨 핵심: 오디오 차단을 뚫기 위한 최초 1회 투명 언락 레이어 */
+#unlock-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #4aa8ff;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    cursor: pointer;
+    border-radius: 20px;
+    transition: opacity 0.3s ease;
+}
+#unlock-overlay h3 { margin: 0 0 6px 0; font-size: 18px; }
+#unlock-overlay p { margin: 0; font-size: 13px; opacity: 0.9; }
+
+/* 유튜브 iframe을 언락 레이어 전체에 투명하게 덮음 */
+.yt-hidden-wrapper {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0.001; /* 눈엔 안 보이지만 브라우저는 클릭을 인식함 */
+}
+.yt-hidden-wrapper iframe { width: 100%; height: 100%; border: none; }
+
+/* 메인 UI */
 .now-playing { display: flex; gap: 20px; align-items: center; }
-
-/* 유튜브 플레이어 영역 (노션 차단 방지용 크기 지정) */
-.yt-frame-container {
-    width: 150px;
-    height: 150px;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-    background: #000;
-}
-.yt-frame-container iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-}
-
+.thumbnail { width: 140px; height: 140px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 .info { flex: 1; min-width: 0; }
 .title { font-size: 20px; font-weight: bold; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .subtitle { color: #6b8296; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -64,7 +77,7 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
 
 @media(max-width: 600px) {
     .now-playing { flex-direction: column; text-align: center; }
-    .yt-frame-container { width: 180px; height: 180px; }
+    .thumbnail { width: 160px; height: 160px; }
     .controls { justify-content: center; }
 }
 </style>
@@ -72,10 +85,18 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
 <body>
 
 <div class="player-box">
-    <div class="now-playing">
-        <div class="yt-frame-container">
+    <!-- 1회성 언락 오버레이 -->
+    <div id="unlock-overlay">
+        <h3>🎵 플레이어 활성화하기</h3>
+        <p>여기를 클릭하면 음악이 시작됩니다</p>
+        <div class="yt-hidden-wrapper">
             <div id="youtube-player"></div>
         </div>
+    </div>
+
+    <!-- 메인 커스텀 플레이어 UI -->
+    <div class="now-playing">
+        <img id="main-thumb" class="thumbnail">
         <div class="info">
             <div id="main-title" class="title">로딩 중...</div>
             <div id="main-subtitle" class="subtitle">잠시만 기다려주세요</div>
@@ -107,12 +128,11 @@ const tracks = [
 
 let current = 0;
 let player = null;
-let isReady = false;
+let isUnlocked = false;
 let timer = null;
 
 const getThumb = (id) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
 
-// 유튜브 Iframe API 로드
 var tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -123,29 +143,29 @@ function onYouTubeIframeAPIReady() {
         height: '100%',
         width: '100%',
         videoId: tracks[0].id,
-        host: 'https://www.youtube-nocookie.com', // 🚨 노션 보안 우회용 설정
         playerVars: {
             'autoplay': 0,
-            'controls': 1,
+            'controls': 0,
             'rel': 0,
-            'playsinline': 1,
-            'enablejsapi': 1
+            'playsinline': 1
         },
         events: {
-            'onReady': onPlayerReady,
             'onStateChange': onPlayerStateChange
         }
     });
 }
 
-function onPlayerReady() {
-    isReady = true;
-    updateUI();
-}
-
 function onPlayerStateChange(event) {
     const playBtn = document.getElementById("playBtn");
+    
+    // 첫 클릭 시 오디오 잠금이 해제되면 언락 레이어를 치웁니다.
     if (event.data === YT.PlayerState.PLAYING) {
+        if (!isUnlocked) {
+            isUnlocked = true;
+            const overlay = document.getElementById("unlock-overlay");
+            overlay.style.opacity = "0";
+            setTimeout(() => overlay.style.display = "none", 300);
+        }
         playBtn.innerText = "⏸";
         startTimer();
     } else {
@@ -158,7 +178,7 @@ function onPlayerStateChange(event) {
 }
 
 function playPause() {
-    if (!isReady || !player) return;
+    if (!player || !player.getPlayerState) return;
     const state = player.getPlayerState();
     if (state === YT.PlayerState.PLAYING) {
         player.pauseVideo();
@@ -175,7 +195,7 @@ function changeTrack(dir) {
 function selectTrack(index) {
     current = index;
     updateUI();
-    if (isReady && player && player.loadVideoById) {
+    if (player && player.loadVideoById) {
         player.loadVideoById(tracks[current].id);
     }
 }
@@ -184,6 +204,7 @@ function updateUI() {
     const track = tracks[current];
     document.getElementById("main-title").innerText = track.title;
     document.getElementById("main-subtitle").innerText = track.subtitle;
+    document.getElementById("main-thumb").src = getThumb(track.id);
 
     const playlistEl = document.getElementById("playlist");
     playlistEl.innerHTML = tracks.map((t, i) => `
@@ -208,7 +229,7 @@ function stopTimer() {
 }
 
 function updateProgress() {
-    if (!isReady || !player || !player.getCurrentTime) return;
+    if (!player || !player.getCurrentTime) return;
     const cur = player.getCurrentTime() || 0;
     const tot = player.getDuration() || 0;
     
@@ -221,7 +242,7 @@ function updateProgress() {
 }
 
 function seek(e) {
-    if (!isReady || !player || !player.getDuration) return;
+    if (!player || !player.getDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
     const targetTime = player.getDuration() * pct;
