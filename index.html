@@ -10,8 +10,7 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
 .player-box {
     position: relative;
     max-width: 620px; margin: auto; background: #d9efff;
-    border-radius: 20px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-    padding: 20px;
+    border-radius: 20px; overflow: hidden; padding: 20px;
 }
 
 /* 🚨 핵심: 오디오 차단을 뚫기 위한 최초 1회 투명 언락 레이어 */
@@ -56,15 +55,15 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
 .btn:hover { background: #3294ee; }
 
 /* 재생바 */
-.progress-area { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.progress-area { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
 .progress { flex: 1; height: 8px; background: #cfdde8; border-radius: 50px; cursor: pointer; position: relative; }
 #progressBar { width: 0%; height: 100%; background: #4aa8ff; border-radius: 50px; position: relative; }
 #progressBar::after {
     content: ""; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
     width: 12px; height: 12px; border-radius: 50%; background: #288df0;
 }
-/* 💡 시 단위 표시를 위해 너비를 45px -> 60px로 확대 */
-.time-text { width: 60px; font-size: 12px; color: #5b7288; text-align: center; flex-shrink: 0; }
+/* 💡 시:분:초(0:00:00) 6자리 텍스트가 잘리지 않도록 너비 확보 */
+.time-text { min-width: 65px; font-size: 12px; color: #5b7288; text-align: center; flex-shrink: 0; }
 
 /* 플레이리스트 */
 .playlist { background: #c7e6fa; padding: 12px; border-radius: 14px; margin-top: 18px; }
@@ -88,8 +87,7 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
 <div class="player-box">
     <!-- 1회성 언락 오버레이 -->
     <div id="unlock-overlay">
-        <h3>🎵 플레이어 활성화하기</h3>
-        <p>여기를 클릭하면 음악이 시작됩니다</p>
+        <h3>🎵Player On🎵</h3>
         <div class="yt-hidden-wrapper">
             <div id="youtube-player"></div>
         </div>
@@ -109,11 +107,12 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
             </div>
 
             <div class="progress-area">
-                <span id="currentTime" class="time-text">0:00</span>
+                <!-- 💡 초기 텍스트부터 시 단위(0:00:00)로 표시 -->
+                <span id="currentTime" class="time-text">0:00:00</span>
                 <div class="progress" onclick="seek(event)">
                     <div id="progressBar"></div>
                 </div>
-                <span id="duration" class="time-text">0:00</span>
+                <span id="duration" class="time-text">0:00:00</span>
             </div>
         </div>
     </div>
@@ -176,6 +175,8 @@ function onPlayerStateChange(event) {
             changeTrack(1);
         }
     }
+    // 상태가 변경될 때 즉시 시간 업데이트
+    updateProgress();
 }
 
 function playPause() {
@@ -229,43 +230,42 @@ function stopTimer() {
     timer = null;
 }
 
-/* 💡 진행률 업데이트 및 시 단위 표시 로직 */
+/* 💡 진행률 및 시간 갱신 함수 */
 function updateProgress() {
     if (!player || !player.getCurrentTime) return;
     const cur = player.getCurrentTime() || 0;
     const tot = player.getDuration() || 0;
     
+    // 시간 텍스트 반영 (항상 시:분:초 포맷 사용)
+    document.getElementById("currentTime").innerText = formatTime(cur);
+    document.getElementById("duration").innerText = formatTime(tot);
+
     if (tot > 0) {
         const pct = (cur / tot) * 100;
-        const showHours = tot >= 3600; // 전체 시간이 1시간(3600초) 이상이면 시간 단위 포함
-        
         document.getElementById("progressBar").style.width = pct + "%";
-        document.getElementById("currentTime").innerText = formatTime(cur, showHours);
-        document.getElementById("duration").innerText = formatTime(tot, showHours);
     }
 }
 
+/* 💡 탐색바 클릭 시 일시정지 상태에서도 즉시 시간 갱신 */
 function seek(e) {
     if (!player || !player.getDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
     const targetTime = player.getDuration() * pct;
     player.seekTo(targetTime, true);
+    
+    document.getElementById("currentTime").innerText = formatTime(targetTime);
+    document.getElementById("progressBar").style.width = (pct * 100) + "%";
 }
 
-/* 💡 시(Hour) 단위를 지원하도록 변환 함수 개선 */
-function formatTime(sec, forceHours = false) {
+/* 💡 항상 무조건 [시:분:초] (예: 0:05:12, 1:23:45) 형태로만 출력하는 포맷 함수 */
+function formatTime(sec) {
     sec = Math.floor(sec || 0);
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
     const s = sec % 60;
 
-    // 1시간 이상이거나 forceHours가 true인 경우 (예: 1:05:23)
-    if (h > 0 || forceHours) {
-        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-    // 1시간 미만인 경우 (예: 5:23)
-    return `${m}:${String(s).padStart(2, '0')}`;
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 updateUI();
