@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: transparent;
+    font-family: Arial, sans-serif;
+}
+
+.player-box {
+    max-width: 620px;
+    margin: auto;
+    background: #d9efff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+/* 상단 플레이어 */
+.now-playing {
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.thumbnail {
+    width: 145px;
+    height: 145px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.info {
+    flex: 1;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #6b8296;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.controls {
+    margin-top: 20px;
+}
+
+button {
+    border: none;
+    background: #4aa8ff;
+    color: white;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+
+/* 숨겨진 유튜브 플레이어 */
+#youtube-player {
+    display:none;
+}
+
+
+/* 목록 */
+.playlist {
+    background: #c7e6fa;
+    padding: 15px 25px 20px;
+}
+
+.track {
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:12px 0;
+    cursor:pointer;
+}
+
+.track img {
+    width:52px;
+    height:52px;
+    border-radius:8px;
+    object-fit:cover;
+}
+
+.track-text {
+    flex:1;
+}
+
+.track-title {
+    font-size:15px;
+    font-weight:bold;
+}
+
+.track-desc {
+    font-size:13px;
+    color:#6d8295;
+    margin-top:4px;
+}
+
+.like {
+    color:#2299ff;
+    font-size:22px;
+}
+
+
+/* 모바일 */
+@media(max-width:600px){
+
+.now-playing{
+    flex-direction:column;
+    text-align:center;
+}
+
+.thumbnail{
+    width:180px;
+    height:180px;
+}
+
+}
+</style>
+</head>
+
+<body>
+<div class="player-box">
+<div class="now-playing">
+<img id="main-thumb" class="thumbnail">
+
+<div class="info">
+
+<div id="main-title" class="title">
+Somply
+</div>
+
+<div id="main-subtitle" class="subtitle">
+Feel-Good Jazz Playlist for Working
+</div>
+
+<div class="controls">
+<button onclick="previousTrack()">◀</button>
+<button onclick="playPause()">▶</button>
+<button onclick="nextTrack()">▶▶</button>
+</div>
+
+</div>
+</div>
+
+<div id="youtube-player"></div>
+
+<div class="playlist">
+<div class="track" onclick="selectTrack(0)">
+<img id="thumb0">
+<div class="track-text">
+<div class="track-title">
+Somply - Feel-Good Jazz Playlist for Working
+</div>
+
+<div class="track-desc">
+Feel-Good Jazz Playlist for Working
+</div>
+</div>
+
+<div class="like">
+♥
+</div>
+</div>
+
+<div class="track" onclick="selectTrack(1)">
+<img id="thumb1">
+<div class="track-text">
+<div class="track-title">
+Somply - Crystal Clear Dream Wave Jazz
+</div>
+
+<div class="track-desc">
+Crystal Clear Dream Wave Jazz
+</div>
+</div>
+
+<div class="like">
+♥
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+const tracks = [
+
+{
+id:"rR-cvnco5sY",
+title:"Somply - Feel-Good Jazz Playlist for Working",
+subtitle:"Feel-Good Jazz Playlist for Working"
+},
+
+{
+id:"V4zgJOsfIYM",
+title:"Somply - Crystal Clear Dream Wave Jazz",
+subtitle:"Crystal Clear Dream Wave Jazz"
+}
+
+];
+
+let current = 0;
+let player;
+
+// 썸네일 적용
+tracks.forEach((track,index)=>{
+let image =
+"https://img.youtube.com/vi/"
++track.id+
+"/maxresdefault.jpg";
+
+document.getElementById("thumb"+index).src=image;
+});
+
+document.getElementById("main-thumb").src =
+"https://img.youtube.com/vi/"+tracks[0].id+"/maxresdefault.jpg";
+
+// 유튜브 생성
+function onYouTubeIframeAPIReady(){
+
+player = new YT.Player(
+"youtube-player",
+{
+height:"0",
+width:"0",
+
+videoId:tracks[0].id,
+
+playerVars:{
+autoplay:1,
+mute:1,
+controls:0
+},
+
+events:{
+'onReady':function(event){
+
+event.target.playVideo();
+
+},
+
+'onStateChange':function(event){
+if(event.data===YT.PlayerState.ENDED){
+
+nextTrack();
+}}}});
+}
+
+// 곡 선택
+function selectTrack(index){
+current=index;
+updateInfo();
+player.loadVideoById(
+tracks[index].id
+);
+}
+
+// 정보 변경
+function updateInfo(){
+let t=tracks[current];
+
+document.getElementById("main-title").innerText =
+t.title;
+
+document.getElementById("main-subtitle").innerText =
+t.subtitle;
+
+document.getElementById("main-thumb").src =
+"https://img.youtube.com/vi/"
++t.id+
+"/maxresdefault.jpg";
+
+}
+
+// 재생/정지
+function playPause(){
+let state=player.getPlayerState();
+if(
+state===YT.PlayerState.PLAYING
+){
+
+player.pauseVideo();
+}else{
+player.playVideo();
+}
+}
+
+// 다음
+function nextTrack(){
+current++;
+
+if(current>=tracks.length){
+current=0;
+}
+selectTrack(current);
+}
+
+// 이전
+function previousTrack(){
+current--;
+
+if(current<0){
+current=tracks.length-1;
+
+}
+selectTrack(current);
+}
+
+</script>
+</body>
+</html>
