@@ -5,15 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-* {
-    box-sizing: border-box;
-}
+* {box-sizing: border-box;}
 
 body {
     margin: 0;
     background: transparent;
-    font-family: Arial, sans-serif;
-}
+    font-family: Arial, sans-serif;}
 
 .player-box {
     max-width: 620px;
@@ -21,43 +18,36 @@ body {
     background: #d9efff;
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-}
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);}
 
 /* 상단 플레이어 */
 .now-playing {
     padding: 20px;
     display: flex;
     gap: 20px;
-    align-items: center;
-}
+    align-items: center;}
 
 .thumbnail {
     width: 145px;
     height: 145px;
     border-radius: 12px;
-    object-fit: cover;
-}
+    object-fit: cover;}
 
 .info {
-    flex: 1;
-}
+    flex: 1;}
 
 .title {
     font-size: 22px;
     font-weight: bold;
-    margin-bottom: 8px;
-}
+    margin-bottom: 8px;}
 
 .subtitle {
     color: #6b8296;
     font-size: 14px;
-    line-height: 1.4;
-}
+    line-height: 1.4;}
 
 .controls {
-    margin-top: 20px;
-}
+    margin-top: 20px;}
 
 button {
     border: none;
@@ -68,49 +58,41 @@ button {
     height: 38px;
     cursor: pointer;
     margin-right: 8px;
-    font-size: 12px;
-}
+    font-size: 12px;}
 
 /* 목록 */
 .playlist {
     background: #c7e6fa;
-    padding: 15px 25px 20px;
-}
+    padding: 15px 25px 20px;}
 
 .track {
     display:flex;
     align-items:center;
     gap:15px;
     padding:12px 0;
-    cursor:pointer;
-}
+    cursor:pointer;}
 
 .track img {
     width:52px;
     height:52px;
     border-radius:8px;
-    object-fit:cover;
-}
+    object-fit:cover;}
 
 .track-text {
-    flex:1;
-}
+    flex:1;}
 
 .track-title {
     font-size:15px;
-    font-weight:bold;
-}
+    font-weight:bold;}
 
 .track-desc {
     font-size:13px;
     color:#6d8295;
-    margin-top:4px;
-}
+    margin-top:4px;}
 
 .like {
     color:#2299ff;
-    font-size:22px;
-}
+    font-size:22px;}
 
 
 /* 모바일 */
@@ -118,15 +100,53 @@ button {
 
 .now-playing{
     flex-direction:column;
-    text-align:center;
-}
+    text-align:center;}
 
 .thumbnail{
     width:180px;
-    height:180px;
+    height:180px;}
 }
 
+.progress-area{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:18px;}
+
+.progress{
+    flex:1;
+    height:6px;
+    background:#cfdde8;
+    border-radius:50px;
+    overflow:hidden;
+    cursor:pointer;}
+
+#progressBar{
+    position:relative;
+    width:0%;
+    height:100%;
+    background:#4aa8ff;
+    transition:width .2s linear;}
+
+#progressBar::after{
+    content:"";
+    position:absolute;
+    right:-6px;
+    top:50%;
+    transform:translateY(-50%);
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#4aa8ff;
 }
+
+#currentTime,
+#duration{
+    width:55px;
+    font-size:12px;
+    color:#5b7288;
+    text-align:center;}
+
 </style>
 </head>
 
@@ -147,8 +167,17 @@ Feel-Good Jazz Playlist for Working
 
 <div class="controls">
 <button onclick="previousTrack()">⏮</button>
-<button onclick="playPause()">▶</button>
+<button id="playBtn" onclick="playPause()">▶</button>
 <button onclick="nextTrack()">⏭</button>
+</div>
+
+<div class="progress-area">
+    <span id="currentTime">0:00</span>
+    <div class="progress" onclick="seek(event)">
+        <div id="progressBar"></div>
+    </div>
+    <span id="duration">0:00</span>
+
 </div>
 
 </div>
@@ -194,129 +223,258 @@ Crystal Clear Dream Wave Jazz
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
+
+// ===============================
+// 플레이리스트 데이터
+// ===============================
+
 const tracks = [
-
 {
-id:"rR-cvnco5sY",
-title:"Somply",
-subtitle:"Feel-Good Jazz Playlist for Working"
+    id: "rR-cvnco5sY",
+    title: "Somply",
+    subtitle: "Feel-Good Jazz Playlist for Working"
 },
-
 {
-id:"V4zgJOsfIYM",
-title:"Somply",
-subtitle:"Crystal Clear Dream Wave Jazz"
+    id: "V4zgJOsfIYM",
+    title: "Somply",
+    subtitle: "Crystal Clear Dream Wave Jazz"
 }
-
 ];
 
 let current = 0;
 let player;
+let progressTimer = null;
 
+
+// ===============================
 // 썸네일 적용
-tracks.forEach((track,index)=>{
-let image =
-"https://img.youtube.com/vi/"
-+track.id+
-"/maxresdefault.jpg";
+// ===============================
 
-document.getElementById("thumb"+index).src=image;
+tracks.forEach((track, index) => {
+
+    const thumb =
+        "https://img.youtube.com/vi/" +
+        track.id +
+        "/maxresdefault.jpg";
+
+    document.getElementById("thumb" + index).src = thumb;
 });
 
-document.getElementById("main-thumb").src =
-"https://img.youtube.com/vi/"+tracks[0].id+"/maxresdefault.jpg";
-
-// 유튜브 생성
-function onYouTubeIframeAPIReady(){
-
-player = new YT.Player(
-"youtube-player",
-{
-height:"0",
-width:"0",
-
-videoId:tracks[0].id,
-
-playerVars:{
-autoplay:1,
-mute:1,
-controls:0
-},
-
-events:{
-'onReady':function(event){
-
-event.target.playVideo();
-
-},
-
-'onStateChange':function(event){
-if(event.data===YT.PlayerState.ENDED){
-
-nextTrack();
-}}}});
-}
-
-// 곡 선택
-function selectTrack(index){
-current=index;
+// 첫 화면 표시
 updateInfo();
-player.loadVideoById(
-tracks[index].id
-);
+
+
+// ===============================
+// 유튜브 플레이어 생성
+// ===============================
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player("youtube-player", {
+        height: "1",
+        width: "1",
+        videoId: tracks[0].id,
+
+        playerVars: {
+            autoplay: 0,
+            controls: 0,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1
+        },
+
+        events: {
+            onReady: function () {
+                updateInfo();
+            },
+
+            onStateChange: onPlayerStateChange
+        }
+    });
 }
 
-// 정보 변경
-function updateInfo(){
-let t=tracks[current];
+// ===============================
+// 플레이어 상태
+// ===============================
 
-document.getElementById("main-title").innerText =
-t.title;
+function onPlayerStateChange(event) {
+    const playBtn = document.getElementById("playBtn");
+    switch (event.data) {
+        case YT.PlayerState.PLAYING:
+            playBtn.innerHTML = "⏸";
+            if (!progressTimer) {
+                progressTimer = setInterval(updateProgress, 250);
+            }
+            break;
 
-document.getElementById("main-subtitle").innerText =
-t.subtitle;
+        case YT.PlayerState.PAUSED:
+            playBtn.innerHTML = "▶";
+            clearInterval(progressTimer);
+            progressTimer = null;
+            break;
 
-document.getElementById("main-thumb").src =
-"https://img.youtube.com/vi/"
-+t.id+
-"/maxresdefault.jpg";
+        case YT.PlayerState.ENDED:
+            playBtn.innerHTML = "▶";
+            clearInterval(progressTimer);
+            progressTimer = null;
+            nextTrack();
+            break;
+    }
+}
+
+
+// ===============================
+// 곡 선택
+// ===============================
+
+function selectTrack(index) {
+    current = index;
+    updateInfo();
+    player.loadVideoById(tracks[current].id);
+    document.getElementById("playBtn").innerHTML = "⏸";
+}
+
+// ===============================
+// 화면 정보 갱신
+// ===============================
+
+function updateInfo() {
+    const track = tracks[current];
+    document.getElementById("main-title").innerText =
+        track.title;
+    document.getElementById("main-subtitle").innerText =
+        track.subtitle;
+    document.getElementById("main-thumb").src =
+        "https://img.youtube.com/vi/" +
+        track.id +
+        "/maxresdefault.jpg";
+updatePlaylistHighlight();
 
 }
 
-// 재생/정지
-function playPause(){
-let state=player.getPlayerState();
-if(
-state===YT.PlayerState.PLAYING
-){
+// ===============================
+// 재생 / 일시정지
+// ===============================
 
-player.pauseVideo();
-}else{
-player.playVideo();
-}
-}
-
-// 다음
-function nextTrack(){
-current++;
-
-if(current>=tracks.length){
-current=0;
-}
-selectTrack(current);
+function playPause() {
+    if (!player) return;
+    const state = player.getPlayerState();
+    if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+    } else {
+        player.playVideo();
+    }
 }
 
-// 이전
-function previousTrack(){
-current--;
 
-if(current<0){
-current=tracks.length-1;
+// ===============================
+// 이전 곡
+// ===============================
 
+function previousTrack() {
+    current--;
+    if (current < 0) {
+        current = tracks.length - 1;
+    }
+    selectTrack(current);
 }
-selectTrack(current);
+
+
+// ===============================
+// 다음 곡
+// ===============================
+
+function nextTrack() {
+    current++;
+    if (current >= tracks.length) {
+        current = 0;
+    }
+    selectTrack(current);
 }
+
+// ===============================
+// 현재 재생 중인 곡 강조
+// ===============================
+
+function updatePlaylistHighlight() {
+    const list = document.querySelectorAll(".track");
+    list.forEach((item, index) => {
+        if (index === current) {
+            item.style.background = "#E8F5FF";
+            item.style.borderRadius = "12px";
+            item.style.boxShadow =
+                "0 0 0 2px rgba(74,168,255,.2)";
+
+        } else {
+            item.style.background = "transparent";
+            item.style.boxShadow = "none";
+        }
+    });
+}
+
+// ===============================
+// 재생바 갱신
+// ===============================
+
+function updateProgress() {
+
+    if (!player) return;
+
+    if (player.getPlayerState() !== YT.PlayerState.PLAYING)
+        return;
+
+    const currentTime = player.getCurrentTime();
+
+    const totalTime = player.getDuration();
+
+    if (!totalTime) return;
+
+    const percent = (currentTime / totalTime) * 100;
+
+    document.getElementById("progressBar").style.width =
+        percent + "%";
+
+    document.getElementById("currentTime").innerText =
+        formatTime(currentTime);
+
+    document.getElementById("duration").innerText =
+        formatTime(totalTime);
+}
+
+// ===============================
+// 시간 표시
+// ===============================
+
+function formatTime(seconds){
+    seconds = Math.floor(seconds);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+
+    if(h > 0){
+        return h + ":"
+            + String(m).padStart(2,"0")
+            + ":"
+            + String(s).padStart(2,"0");
+    }
+
+    return m + ":"
+        + String(s).padStart(2,"0");
+}
+
+// ===============================
+// 재생바 클릭 이동
+// ===============================
+
+function seek(event){
+    if(!player) return;
+    const bar = event.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const percent = clickX / rect.width;
+    const duration = player.getDuration();
+    player.seekTo(duration * percent, true);}
 
 </script>
 </body>
