@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 * { box-sizing: border-box; }
-body { margin: 0; background: transparent; font-family: 'Times New Roman', Times, serif: user-select: none; }
+/* 💡 font-family를 Times New Roman으로 변경했습니다 */
+body { margin: 0; background: transparent; font-family: 'Times New Roman', Times, serif; user-select: none; }
 
 .player-box {
     position: relative;
     max-width: 620px; margin: auto; background: #d9efff;
-    border-radius: 20px; overflow: hidden; padding: 20px;
+    border-radius: 20px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    padding: 20px;
 }
 
 /* 🚨 핵심: 오디오 차단을 뚫기 위한 최초 1회 투명 언락 레이어 */
@@ -51,6 +53,7 @@ body { margin: 0; background: transparent; font-family: 'Times New Roman', Times
     border: none; background: #4aa8ff; color: white; border-radius: 50%;
     width: 38px; height: 38px; cursor: pointer; font-size: 13px;
     display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
 }
 .btn:hover { background: #3294ee; }
 
@@ -62,7 +65,6 @@ body { margin: 0; background: transparent; font-family: 'Times New Roman', Times
     content: ""; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
     width: 12px; height: 12px; border-radius: 50%; background: #288df0;
 }
-/* 💡 시:분:초(0:00:00) 6자리 텍스트가 잘리지 않도록 너비 확보 */
 .time-text { min-width: 65px; font-size: 12px; color: #5b7288; text-align: center; flex-shrink: 0; }
 
 /* 플레이리스트 */
@@ -107,7 +109,6 @@ body { margin: 0; background: transparent; font-family: 'Times New Roman', Times
             </div>
 
             <div class="progress-area">
-                <!-- 💡 초기 텍스트부터 시 단위(0:00:00)로 표시 -->
                 <span id="currentTime" class="time-text">0:00:00</span>
                 <div class="progress" onclick="seek(event)">
                     <div id="progressBar"></div>
@@ -158,7 +159,6 @@ function onYouTubeIframeAPIReady() {
 function onPlayerStateChange(event) {
     const playBtn = document.getElementById("playBtn");
     
-    // 첫 클릭 시 오디오 잠금이 해제되면 언락 레이어를 치웁니다.
     if (event.data === YT.PlayerState.PLAYING) {
         if (!isUnlocked) {
             isUnlocked = true;
@@ -175,7 +175,6 @@ function onPlayerStateChange(event) {
             changeTrack(1);
         }
     }
-    // 상태가 변경될 때 즉시 시간 업데이트
     updateProgress();
 }
 
@@ -230,13 +229,11 @@ function stopTimer() {
     timer = null;
 }
 
-/* 💡 진행률 및 시간 갱신 함수 */
 function updateProgress() {
     if (!player || !player.getCurrentTime) return;
     const cur = player.getCurrentTime() || 0;
     const tot = player.getDuration() || 0;
     
-    // 시간 텍스트 반영 (항상 시:분:초 포맷 사용)
     document.getElementById("currentTime").innerText = formatTime(cur);
     document.getElementById("duration").innerText = formatTime(tot);
 
@@ -246,7 +243,6 @@ function updateProgress() {
     }
 }
 
-/* 💡 탐색바 클릭 시 일시정지 상태에서도 즉시 시간 갱신 */
 function seek(e) {
     if (!player || !player.getDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -258,7 +254,6 @@ function seek(e) {
     document.getElementById("progressBar").style.width = (pct * 100) + "%";
 }
 
-/* 💡 항상 무조건 [시:분:초] (예: 0:05:12, 1:23:45) 형태로만 출력하는 포맷 함수 */
 function formatTime(sec) {
     sec = Math.floor(sec || 0);
     const h = Math.floor(sec / 3600);
