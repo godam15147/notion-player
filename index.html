@@ -63,7 +63,8 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-
     content: ""; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
     width: 12px; height: 12px; border-radius: 50%; background: #288df0;
 }
-.time-text { width: 45px; font-size: 12px; color: #5b7288; text-align: center; }
+/* 💡 시 단위 표시를 위해 너비를 45px -> 60px로 확대 */
+.time-text { width: 60px; font-size: 12px; color: #5b7288; text-align: center; flex-shrink: 0; }
 
 /* 플레이리스트 */
 .playlist { background: #c7e6fa; padding: 12px; border-radius: 14px; margin-top: 18px; }
@@ -228,6 +229,7 @@ function stopTimer() {
     timer = null;
 }
 
+/* 💡 진행률 업데이트 및 시 단위 표시 로직 */
 function updateProgress() {
     if (!player || !player.getCurrentTime) return;
     const cur = player.getCurrentTime() || 0;
@@ -235,9 +237,11 @@ function updateProgress() {
     
     if (tot > 0) {
         const pct = (cur / tot) * 100;
+        const showHours = tot >= 3600; // 전체 시간이 1시간(3600초) 이상이면 시간 단위 포함
+        
         document.getElementById("progressBar").style.width = pct + "%";
-        document.getElementById("currentTime").innerText = formatTime(cur);
-        document.getElementById("duration").innerText = formatTime(tot);
+        document.getElementById("currentTime").innerText = formatTime(cur, showHours);
+        document.getElementById("duration").innerText = formatTime(tot, showHours);
     }
 }
 
@@ -249,9 +253,18 @@ function seek(e) {
     player.seekTo(targetTime, true);
 }
 
-function formatTime(sec) {
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
+/* 💡 시(Hour) 단위를 지원하도록 변환 함수 개선 */
+function formatTime(sec, forceHours = false) {
+    sec = Math.floor(sec || 0);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+
+    // 1시간 이상이거나 forceHours가 true인 경우 (예: 1:05:23)
+    if (h > 0 || forceHours) {
+        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    // 1시간 미만인 경우 (예: 5:23)
     return `${m}:${String(s).padStart(2, '0')}`;
 }
 
