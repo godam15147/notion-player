@@ -3,15 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 💡 구글 웹폰트 (Times New Roman 호환) 로드 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
 <style>
-/* 💡 1. 모든 요소에 Times New Roman 폰트를 강제 적용 */
+/* 💡 모든 요소에 Times New Roman / Tinos 폰트 강제 적용 */
 * { 
     box-sizing: border-box; 
-    font-family: 'Times New Roman', Times, serif !important; 
+    font-family: 'Tinos', 'Times New Roman', Times, serif !important; 
 }
 body { margin: 0; background: transparent; user-select: none; }
 
-/* 💡 2. 여백을 줄여 작아진 위젯 크기에서도 요소가 깨지지 않게 수정 */
+/* 여백 최적화 */
 .player-box {
     position: relative;
     max-width: 620px; margin: auto; background: #d9efff;
@@ -19,7 +24,7 @@ body { margin: 0; background: transparent; user-select: none; }
     padding: 14px 16px;
 }
 
-/* 🚨 핵심: 오디오 차단을 뚫기 위한 최초 1회 투명 언락 레이어 */
+/* 🚨 1회성 언락 오버레이 */
 #unlock-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -39,17 +44,15 @@ body { margin: 0; background: transparent; user-select: none; }
 #unlock-overlay h3 { margin: 0 0 6px 0; font-size: 18px; }
 #unlock-overlay p { margin: 0; font-size: 13px; opacity: 0.9; }
 
-/* 유튜브 iframe을 언락 레이어 전체에 투명하게 덮음 */
 .yt-hidden-wrapper {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    opacity: 0.001; /* 눈엔 안 보이지만 브라우저는 클릭을 인식함 */
+    opacity: 0.001;
 }
 .yt-hidden-wrapper iframe { width: 100%; height: 100%; border: none; }
 
 /* 메인 UI */
 .now-playing { display: flex; gap: 14px; align-items: center; }
-/* 썸네일 크기 살짝 축소 (140px -> 110px) */
 .thumbnail { width: 110px; height: 110px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 .info { flex: 1; min-width: 0; }
 .title { font-size: 18px; font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -63,7 +66,7 @@ body { margin: 0; background: transparent; user-select: none; }
 }
 .btn:hover { background: #3294ee; }
 
-/* 재생바 공간 최적화 (재생바 사라짐 방지) */
+/* 재생바 공간 */
 .progress-area { display: flex; align-items: center; gap: 6px; margin-top: 12px; width: 100%; }
 .progress { flex: 1; min-width: 50px; height: 8px; background: #cfdde8; border-radius: 50px; cursor: pointer; position: relative; }
 #progressBar { width: 0%; height: 100%; background: #4aa8ff; border-radius: 50px; position: relative; }
@@ -71,7 +74,7 @@ body { margin: 0; background: transparent; user-select: none; }
     content: ""; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
     width: 12px; height: 12px; border-radius: 50%; background: #288df0;
 }
-.time-text { min-width: 52px; font-size: 11px; color: #5b7288; text-align: center; flex-shrink: 0; }
+.time-text { min-width: 55px; font-size: 11px; color: #5b7288; text-align: center; flex-shrink: 0; }
 
 /* 플레이리스트 */
 .playlist { background: #c7e6fa; padding: 10px; border-radius: 14px; margin-top: 14px; }
@@ -93,7 +96,6 @@ body { margin: 0; background: transparent; user-select: none; }
 <body>
 
 <div class="player-box">
-    <!-- 💡 3. 1회성 언락 카드의 문구는 아래 <h3>과 <p> 태그 안에서 직접 변경하실 수 있습니다 -->
     <div id="unlock-overlay">
         <h3>🎵 Music Player</h3>
         <p>Click anywhere to start playing</p>
@@ -102,7 +104,6 @@ body { margin: 0; background: transparent; user-select: none; }
         </div>
     </div>
 
-    <!-- 메인 커스텀 플레이어 UI -->
     <div class="now-playing">
         <img id="main-thumb" class="thumbnail">
         <div class="info">
