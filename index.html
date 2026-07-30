@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 * { box-sizing: border-box; }
-body { margin: 0; background: transparent; font-family: Arial, sans-serif; }
+body { margin: 0; background: transparent; font-family: Arial, sans-serif; user-select: none; }
 
 .player-box {
     max-width: 620px; margin: auto; background: #d9efff;
@@ -14,73 +14,83 @@ body { margin: 0; background: transparent; font-family: Arial, sans-serif; }
 }
 
 .now-playing { display: flex; gap: 20px; align-items: center; }
-.thumbnail { width: 145px; height: 145px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+
+/* 유튜브 플레이어 영역 (노션 차단 방지용 크기 지정) */
+.yt-frame-container {
+    width: 150px;
+    height: 150px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #000;
+}
+.yt-frame-container iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
 .info { flex: 1; min-width: 0; }
+.title { font-size: 20px; font-weight: bold; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subtitle { color: #6b8296; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.title, .subtitle, .track-title, .track-desc {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.title { font-size: 22px; font-weight: bold; margin-bottom: 6px; }
-.subtitle { color: #6b8296; font-size: 14px; line-height: 1.4; }
-#statusMsg { font-size: 12px; color: #2b7bc0; margin-top: 4px; font-weight: bold; }
-
-.controls { margin-top: 16px; }
-button {
+.controls { margin-top: 16px; display: flex; align-items: center; gap: 8px; }
+.btn {
     border: none; background: #4aa8ff; color: white; border-radius: 50%;
-    width: 38px; height: 38px; cursor: pointer; margin-right: 8px; font-size: 12px;
+    width: 38px; height: 38px; cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
 }
-button:disabled { background: #b0d8ff; cursor: not-allowed; }
+.btn:hover { background: #3294ee; }
 
 /* 재생바 */
 .progress-area { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
-.progress { flex: 1; height: 6px; background: #cfdde8; border-radius: 50px; cursor: pointer; position: relative; }
+.progress { flex: 1; height: 8px; background: #cfdde8; border-radius: 50px; cursor: pointer; position: relative; }
 #progressBar { width: 0%; height: 100%; background: #4aa8ff; border-radius: 50px; position: relative; }
 #progressBar::after {
-    content: ""; position: absolute; right: -6px; top: 50%; transform: translateY(-50%);
-    width: 12px; height: 12px; border-radius: 50%; background: #4aa8ff;
+    content: ""; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
+    width: 12px; height: 12px; border-radius: 50%; background: #288df0;
 }
 .time-text { width: 45px; font-size: 12px; color: #5b7288; text-align: center; }
 
 /* 플레이리스트 */
-.playlist { background: #c7e6fa; padding: 15px; border-radius: 12px; margin-top: 20px; }
+.playlist { background: #c7e6fa; padding: 12px; border-radius: 14px; margin-top: 18px; }
 .track {
-    display: flex; align-items: center; gap: 15px; padding: 10px;
-    cursor: pointer; border-radius: 12px; transition: background 0.2s;
+    display: flex; align-items: center; gap: 12px; padding: 10px;
+    cursor: pointer; border-radius: 10px; transition: background 0.2s;
 }
-.track img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-.track-text { flex: 1; min-width: 0; }
-.track-title { font-size: 15px; font-weight: bold; }
-.track-desc { font-size: 13px; color: #6d8295; margin-top: 4px; }
+.track img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.track-title { font-size: 14px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-desc { font-size: 12px; color: #6d8295; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 @media(max-width: 600px) {
     .now-playing { flex-direction: column; text-align: center; }
-    .thumbnail { width: 180px; height: 180px; }
-    .controls { display: flex; justify-content: center; }
+    .yt-frame-container { width: 180px; height: 180px; }
+    .controls { justify-content: center; }
 }
 </style>
 </head>
-
 <body>
-<div class="player-box">
-    <!-- 🚨 유튜브 iframe을 완전히 지우고 오디오 태그만 사용 -->
-    <audio id="audioPlayer"></audio>
 
+<div class="player-box">
     <div class="now-playing">
-        <img id="main-thumb" class="thumbnail">
+        <div class="yt-frame-container">
+            <div id="youtube-player"></div>
+        </div>
         <div class="info">
-            <div id="main-title" class="title">로딩중...</div>
+            <div id="main-title" class="title">로딩 중...</div>
             <div id="main-subtitle" class="subtitle">잠시만 기다려주세요</div>
-            <div id="statusMsg">음원 준비 중...</div>
             
             <div class="controls">
-                <button onclick="changeTrack(-1)">⏮</button>
-                <button id="playBtn" onclick="playPause()" disabled>▶</button>
-                <button onclick="changeTrack(1)">⏭</button>
+                <button class="btn" onclick="changeTrack(-1)">⏮</button>
+                <button id="playBtn" class="btn" onclick="playPause()">▶</button>
+                <button class="btn" onclick="changeTrack(1)">⏭</button>
             </div>
-            
+
             <div class="progress-area">
                 <span id="currentTime" class="time-text">0:00</span>
-                <div class="progress" onclick="seek(event)"><div id="progressBar"></div></div>
+                <div class="progress" onclick="seek(event)">
+                    <div id="progressBar"></div>
+                </div>
                 <span id="duration" class="time-text">0:00</span>
             </div>
         </div>
@@ -96,113 +106,135 @@ const tracks = [
 ];
 
 let current = 0;
-const audio = document.getElementById("audioPlayer");
+let player = null;
+let isReady = false;
+let timer = null;
+
 const getThumb = (id) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
 
-function initApp() {
-    const playlistHTML = tracks.map((track, i) => `
-        <div class="track" onclick="selectTrack(${i})">
-            <img src="${getThumb(track.id)}">
-            <div class="track-text">
-                <div class="track-title">${track.title}</div>
-                <div class="track-desc">${track.subtitle}</div>
-            </div>
-        </div>
-    `).join('');
-    document.getElementById("playlist").innerHTML = playlistHTML;
-    loadTrack(0);
+// 유튜브 Iframe API 로드
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+var firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('youtube-player', {
+        height: '100%',
+        width: '100%',
+        videoId: tracks[0].id,
+        host: 'https://www.youtube-nocookie.com', // 🚨 노션 보안 우회용 설정
+        playerVars: {
+            'autoplay': 0,
+            'controls': 1,
+            'rel': 0,
+            'playsinline': 1,
+            'enablejsapi': 1
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
 }
 
-// 유튜브 ID로부터 실제 오디오 스트림 URL을 추출하여 <audio>에 전달
-async function loadTrack(index) {
-    current = index;
-    const track = tracks[current];
-    
-    document.getElementById("main-title").innerText = track.title;
-    document.getElementById("main-subtitle").innerText = track.subtitle;
-    document.getElementById("main-thumb").src = getThumb(track.id);
-    document.getElementById("statusMsg").innerText = "음원 연결 중...";
-    document.getElementById("playBtn").disabled = true;
+function onPlayerReady() {
+    isReady = true;
+    updateUI();
+}
 
-    updatePlaylistUI();
-
-    try {
-        // 우회 API를 통한 오디오 스트림 URL 받아오기
-        const res = await fetch(`https://pipedapi.kavin.rocks/streams/${track.id}`);
-        const data = await res.json();
-        
-        // 오디오 스트림 선택 (m4a / mp4)
-        const audioStream = data.audioStreams.find(s => s.mimeType.includes('audio/mp4')) || data.audioStreams[0];
-        
-        if (audioStream && audioStream.url) {
-            audio.src = audioStream.url;
-            document.getElementById("statusMsg").innerText = "재생 준비 완료";
-            document.getElementById("playBtn").disabled = false;
-        } else {
-            throw new Error("Audio stream error");
+function onPlayerStateChange(event) {
+    const playBtn = document.getElementById("playBtn");
+    if (event.data === YT.PlayerState.PLAYING) {
+        playBtn.innerText = "⏸";
+        startTimer();
+    } else {
+        playBtn.innerText = "▶";
+        stopTimer();
+        if (event.data === YT.PlayerState.ENDED) {
+            changeTrack(1);
         }
-    } catch (err) {
-        console.error(err);
-        document.getElementById("statusMsg").innerText = "음원 로딩 실패 (다른 곡을 선택해보세요)";
     }
 }
 
 function playPause() {
-    if (!audio.src) return;
-    if (audio.paused) {
-        audio.play();
-        document.getElementById("playBtn").innerText = "⏸";
+    if (!isReady || !player) return;
+    const state = player.getPlayerState();
+    if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
     } else {
-        audio.pause();
-        document.getElementById("playBtn").innerText = "▶";
+        player.playVideo();
     }
 }
 
 function changeTrack(dir) {
-    audio.pause();
-    document.getElementById("playBtn").innerText = "▶";
     current = (current + dir + tracks.length) % tracks.length;
-    loadTrack(current);
+    selectTrack(current);
 }
 
 function selectTrack(index) {
-    audio.pause();
-    document.getElementById("playBtn").innerText = "▶";
-    loadTrack(index);
+    current = index;
+    updateUI();
+    if (isReady && player && player.loadVideoById) {
+        player.loadVideoById(tracks[current].id);
+    }
 }
 
-function updatePlaylistUI() {
-    document.querySelectorAll(".track").forEach((item, index) => {
-        item.style.background = index === current ? "#E8F5FF" : "transparent";
-    });
+function updateUI() {
+    const track = tracks[current];
+    document.getElementById("main-title").innerText = track.title;
+    document.getElementById("main-subtitle").innerText = track.subtitle;
+
+    const playlistEl = document.getElementById("playlist");
+    playlistEl.innerHTML = tracks.map((t, i) => `
+        <div class="track" style="background: ${i === current ? '#ffffff' : 'transparent'};" onclick="selectTrack(${i})">
+            <img src="${getThumb(t.id)}">
+            <div>
+                <div class="track-title">${t.title}</div>
+                <div class="track-desc">${t.subtitle}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
-// 표준 HTML5 재생바 및 시간 업데이트 (노션에서도 완벽 작동)
-audio.ontimeupdate = function() {
-    if (!audio.duration) return;
-    const pct = (audio.currentTime / audio.duration) * 100;
-    document.getElementById("progressBar").style.width = `${pct}%`;
-    document.getElementById("currentTime").innerText = formatTime(audio.currentTime);
-    document.getElementById("duration").innerText = formatTime(audio.duration);
-};
+function startTimer() {
+    stopTimer();
+    timer = setInterval(updateProgress, 300);
+}
 
-audio.onended = function() {
-    changeTrack(1);
-};
+function stopTimer() {
+    if (timer) clearInterval(timer);
+    timer = null;
+}
 
-function seek(event) {
-    if (!audio.duration) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    audio.currentTime = audio.duration * ((event.clientX - rect.left) / rect.width);
+function updateProgress() {
+    if (!isReady || !player || !player.getCurrentTime) return;
+    const cur = player.getCurrentTime() || 0;
+    const tot = player.getDuration() || 0;
+    
+    if (tot > 0) {
+        const pct = (cur / tot) * 100;
+        document.getElementById("progressBar").style.width = pct + "%";
+        document.getElementById("currentTime").innerText = formatTime(cur);
+        document.getElementById("duration").innerText = formatTime(tot);
+    }
+}
+
+function seek(e) {
+    if (!isReady || !player || !player.getDuration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    const targetTime = player.getDuration() * pct;
+    player.seekTo(targetTime, true);
 }
 
 function formatTime(sec) {
-    if (!sec || isNaN(sec)) return "0:00";
-    const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
-    return `${m}:${String(s).padStart(2, "0")}`;
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-initApp();
+updateUI();
 </script>
 </body>
 </html>
